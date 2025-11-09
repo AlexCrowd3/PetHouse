@@ -91,6 +91,3 @@ npm run bundle:ios
 echo "========================================="
 echo "iOS проект успешно сгенерирован!"
 echo "========================================="
-
-open "https://www.anekdot.ru/i/caricatures/normal/25/2/16/yumor-dnya_33477.jpg"
-open "https://shutok.ru/uploads/posts/2022-07/1657647272_shutok.ru.6.jpg"
