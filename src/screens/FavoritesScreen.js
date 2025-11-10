@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, Text } from 'react-native';
+import { View, FlatList, Text, StyleSheet } from 'react-native';
 import Colors from '../styles/Colors';
-import ServiceTabs from '../components/ServiceTabs';
-import SearchBar from '../components/SearchBar';
 import ServiceCard from '../components/ServiceCard';
+import SearchBar from '../components/SearchBar';
+import ServiceTabs from '../components/ServiceTabs';
 import { allServices } from '../data/mockData';
-import { Svg, Path } from 'react-native-svg';
 import BottomNavBar from '../components/BottomNavBar';
 
-export default function HomeScreen() {
+export default function FavoritesScreen() {
     const [activeTab, setActiveTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [services, setServices] = useState(allServices);
+    const [favorites, setFavorites] = useState([]);
 
     useEffect(() => {
-        let filtered = allServices;
+        let filtered = allServices.filter(s => s.isFavorite);
+
         if (activeTab !== 'all') {
             filtered = filtered.filter(s => s.type === activeTab.slice(0, -1));
         }
+
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(s =>
@@ -26,43 +27,40 @@ export default function HomeScreen() {
                 s.shortAddress.toLowerCase().includes(query)
             );
         }
-        setServices(filtered);
+
+        setFavorites(filtered);
     }, [activeTab, searchQuery]);
 
     const handleToggleFavorite = (id) => {
-        setServices(prev => prev.map(s =>
-            s.id === id ? { ...s, isFavorite: !s.isFavorite } : s
-        ));
+        setFavorites(prev =>
+            prev.map(s =>
+                s.id === id ? { ...s, isFavorite: !s.isFavorite } : s
+            )
+        );
     };
 
     const EmptyState = () => (
         <View style={styles.emptyState}>
-            <Svg width={70} height={70} viewBox="0 0 24 24" stroke={Colors.gray} strokeWidth={1.6} fill="none">
-                <Path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-                <Path d="M9 9h.01M15 9h.01M8 15c1.333 1.333 2.667 2 4 2s2.667-.667 4-2" strokeLinecap="round" />
-            </Svg>
-            <Text style={styles.emptyStateText}>Ничего не найдено</Text>
-            <Text style={styles.emptyStateSubtext}>
-                Попробуйте изменить запрос или выбрать другую категорию
-            </Text>
+            <Text style={styles.emptyText}>Список избранного пуст</Text>
+            <Text style={styles.emptySubtext}>Добавьте услуги в избранное, чтобы они здесь отображались</Text>
         </View>
     );
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>PetHouse</Text>
-            <Text style={styles.subtitle}>Найдите лучшие услуги для вашего питомца</Text>
+            <Text style={styles.title}>Избранное</Text>
+            <Text style={styles.subtitle}>Все ваши любимые питомники, гостиницы и выгульщики</Text>
 
             <SearchBar
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="Поиск питомников, гостиниц, выгульщиков..."
+                placeholder="Поиск по избранному..."
             />
 
             <ServiceTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
             <FlatList
-                data={services}
+                data={favorites}
                 renderItem={({ item }) => (
                     <ServiceCard item={item} onToggleFavorite={handleToggleFavorite} />
                 )}
@@ -86,7 +84,7 @@ const styles = StyleSheet.create({
         paddingBottom: 10,
     },
     title: {
-        fontSize: 30,
+        fontSize: 28,
         fontWeight: '700',
         color: Colors.textPrimary,
         marginBottom: 6,
@@ -97,20 +95,20 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     listContent: {
-        paddingBottom: 80, // чтобы не упиралось в таб бар
+        paddingBottom: 80,
     },
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 80,
-        gap: 10,
+        gap: 12,
     },
-    emptyStateText: {
+    emptyText: {
         fontSize: 18,
-        color: Colors.textPrimary,
         fontWeight: '600',
+        color: Colors.textPrimary,
     },
-    emptyStateSubtext: {
+    emptySubtext: {
         fontSize: 14,
         color: Colors.gray,
         textAlign: 'center',

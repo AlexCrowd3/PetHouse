@@ -1,4 +1,4 @@
-import { supabase } from './lib/supabase';
+import { supabase } from './service/supabase';
 
 export async function testSupabaseConnection() {
     const { data, error } = await supabase

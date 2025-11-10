@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Ковор",
-    "slug": "Kovor",
+    "name": "PetHouse",
+    "slug": "PetHouse",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,7 @@
       "expo-tracking-transparency"
     ],
     "ios": {
-      "bundleIdentifier": "com.Kovor.SearchCoworkingSpaces"
+      "bundleIdentifier": "com.PetHouse.PetHouseSpaces"
     }
   }
 }

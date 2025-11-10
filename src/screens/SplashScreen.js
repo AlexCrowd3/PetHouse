@@ -1,81 +1,75 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
-import { View, StyleSheet, Animated, Dimensions, Image, Easing } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, Text, Easing } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ThemeContext } from '../context/ThemeContext';
+import Colors from '../styles/Colors'
+import Typography from '../styles/Typography'
 
-const { width, height } = Dimensions.get('window');
-const diagonal = Math.sqrt(width * width + height * height);
 
 const SplashScreen = () => {
-    const { theme, toggleTheme } = useContext(ThemeContext);
     const navigation = useNavigation();
-    const scaleAnim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const [showImage, setShowImage] = useState(false);
-    const styles = getStyles(theme);
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
     useEffect(() => {
-        Animated.timing(scaleAnim, {
-            toValue: diagonal / 50,
-            duration: 2000,
-            easing: Easing.out(Easing.exp),
-            useNativeDriver: true,
-        }).start(() => {
-            setShowImage(true);
+        Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,
-                duration: 800,
+                duration: 1500,
+                easing: Easing.out(Easing.exp),
                 useNativeDriver: true,
-            }).start(() => {
-                setTimeout(() => {
-                    navigation.replace('Home');
-                }, 1500);
-            });
+            }),
+            Animated.timing(scaleAnim, {
+                toValue: 1,
+                duration: 2000,
+                easing: Easing.out(Easing.exp),
+                useNativeDriver: true,
+            })
+        ]).start(() => {
+            setTimeout(() => {
+                navigation.replace('Home');
+            }, 1000);
         });
     }, []);
 
     return (
         <View style={styles.container}>
-            {/* Круг — расширяющаяся заливка */}
             <Animated.View
                 style={[
-                    styles.circle,
+                    styles.textContainer,
                     {
+                        opacity: fadeAnim,
                         transform: [{ scale: scaleAnim }],
                     },
                 ]}
-            />
-
-            {showImage && (
-                <Animated.Image
-                    source={require('../assets/images/splashImage.png')}
-                    style={[styles.image, { opacity: fadeAnim }]}
-                />
-            )}
+            >
+                <Text style={styles.appName}>PetHouse</Text>
+                <Text style={styles.subtitle}>Ваш помощник для питомцев</Text>
+            </Animated.View>
         </View>
     );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.black,
+        backgroundColor: Colors.background,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    circle: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: theme.green,
+    textContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    image: {
-        position: 'absolute',
-        width: '60%',
-        resizeMode: 'contain',
+    appName: {
+        ...Typography.title,
+        color: Colors.primary,
+        marginBottom: 10,
+    },
+    subtitle: {
+        ...Typography.button,
+        fontSize: 16,
+        color: Colors.primary,
+        opacity: 0.8,
     },
 });
 
