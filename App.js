@@ -8,17 +8,13 @@ import { View, Text } from 'react-native';
 import SplashScreen from './src/screens/SplashScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import FavoritesScreen from './src/screens/FavoritesScreen';
-import { testSupabaseConnection } from './src/testSupabase';
 import { loadFonts } from './src/styles/Fonts';
+import Colors from './src/styles/Colors';
 
 const Stack = createStackNavigator();
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
-
-  /*useEffect(() => {
-    testSupabaseConnection();
-  }, []);*/
 
   useEffect(() => {
     async function prepare() {
@@ -39,8 +35,8 @@ export default function App() {
   if (!fontsLoaded) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#4CAF50' }}>
-          <Text style={{ color: 'white', fontSize: 18 }}>Загрузка...</Text>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
+          <Text style={{ color: Colors.textPrimary, fontSize: 18 }}>Загрузка...</Text>
         </View>
       </GestureHandlerRootView>
     );
