@@ -1,81 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Colors from '../styles/Colors';
 
-const ServiceCard = ({ item, onToggleFavorite }) => {
+const ServiceCard = ({ item, onFavoriteChange }) => {
+    const [isFavorite, setIsFavorite] = useState(false);
 
-    const getTypeIcon = (type) => {
-        switch (type) {
-            case 'kennel': // питомник
-                return (
-                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                        <Path
-                            d="M3 9.5L12 3l9 6.5V21a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"
-                            stroke={Colors.primary}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                        <Path
-                            d="M9 21V12h6v9"
-                            stroke={Colors.primary}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    </Svg>
-                );
-            case 'hotel': // гостиница
-                return (
-                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                        <Path
-                            d="M3 21V10a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v11"
-                            stroke={Colors.primary}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                        <Path
-                            d="M3 21h18M6 21V13h4v8M14 21v-5h4v5"
-                            stroke={Colors.primary}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    </Svg>
-                );
-            case 'walker': // выгульщик
-                return (
-                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                        <Path
-                            d="M16 3.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM6 8l3 1.5 1.5 4 3 1 1.5 6"
-                            stroke={Colors.primary}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                        <Path
-                            d="M4 19l4-7"
-                            stroke={Colors.primary}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    </Svg>
-                );
-            default:
-                return (
-                    <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                        <Path
-                            d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm0 14v-4M12 8h.01"
-                            stroke={Colors.primary}
-                            strokeWidth={1.8}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    </Svg>
-                );
+    // Проверяем, есть ли элемент в избранном
+    useEffect(() => {
+        const checkFavorite = async () => {
+            try {
+                const json = await AsyncStorage.getItem('favorites');
+                const favorites = json ? JSON.parse(json) : [];
+                const exists = favorites.some(fav => fav.id === item.id);
+                setIsFavorite(exists);
+            } catch (error) {
+                console.error('Ошибка при загрузке избранного:', error);
+            }
+        };
+        checkFavorite();
+    }, [item]);
+
+    // Добавление/удаление из избранного
+    const toggleFavorite = async () => {
+        try {
+            const json = await AsyncStorage.getItem('favorites');
+            let favorites = json ? JSON.parse(json) : [];
+
+            const exists = favorites.some(fav => fav.id === item.id);
+            let updated;
+
+            if (exists) {
+                // Удаляем
+                updated = favorites.filter(fav => fav.id !== item.id);
+                setIsFavorite(false);
+            } else {
+                // Добавляем
+                updated = [...favorites, item];
+                setIsFavorite(true);
+            }
+
+            await AsyncStorage.setItem('favorites', JSON.stringify(updated));
+            if (onFavoriteChange) onFavoriteChange(); // Обновляем экран избранного
+
+        } catch (error) {
+            console.error('Ошибка при обновлении избранного:', error);
         }
     };
 
@@ -89,9 +59,9 @@ const ServiceCard = ({ item, onToggleFavorite }) => {
     };
 
     const renderPrice = () => {
-        if (item.pricePerHour) return `${item.pricePerHour} ₽/час`;
-        if (item.pricePerNight) return `${item.pricePerNight} ₽/ночь`;
-        if (item.priceRange) return item.priceRange;
+        if (item.price_per_hour || item.pricePerHour) return `${item.price_per_hour || item.pricePerHour} ₽/час`;
+        if (item.price_per_night || item.pricePerNight) return `${item.price_per_night || item.pricePerNight} ₽/ночь`;
+        if (item.price_range || item.priceRange) return item.price_range || item.priceRange;
         return '';
     };
 
@@ -99,17 +69,16 @@ const ServiceCard = ({ item, onToggleFavorite }) => {
         <View style={styles.card}>
             <View style={styles.header}>
                 <View style={styles.typeBadge}>
-                    {getTypeIcon(item.type)}
                     <Text style={styles.typeText}>{getTypeText(item.type)}</Text>
                 </View>
 
-                <TouchableOpacity onPress={() => onToggleFavorite(item.id)}>
-                    <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+                <TouchableOpacity onPress={toggleFavorite}>
+                    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
                         <Path
-                            d="M12 21s-6-4.35-9-8.5S3.5 3 7.5 3a4.5 4.5 0 0 1 4.5 3.5A4.5 4.5 0 0 1 16.5 3c4 0 6.5 3.5 4.5 9.5S12 21 12 21z"
-                            fill={item.isFavorite ? Colors.red : 'none'}
-                            stroke={item.isFavorite ? Colors.red : Colors.gray}
-                            strokeWidth={1.8}
+                            d="M12 21s-7-5.5-10-10c-2.5-4 1-9 6-9 2.5 0 4 2 4 2s1.5-2 4-2c5 0 8.5 5 6 9-3 4.5-10 10-10 10z"
+                            strokeWidth={2}
+                            fill={isFavorite ? Colors.red : 'none'}
+                            stroke={isFavorite ? Colors.red : Colors.gray}
                             strokeLinecap="round"
                             strokeLinejoin="round"
                         />
@@ -121,7 +90,7 @@ const ServiceCard = ({ item, onToggleFavorite }) => {
             <Text style={styles.description}>{item.description}</Text>
 
             <View style={styles.footer}>
-                <Text style={styles.address}>{item.shortAddress}</Text>
+                <Text style={styles.address}>{item.short_address || item.shortAddress}</Text>
                 <View style={styles.ratingContainer}>
                     <View style={styles.ratingRow}>
                         <Svg width={14} height={14} viewBox="0 0 24 24" fill={Colors.orange}>
@@ -138,12 +107,10 @@ const ServiceCard = ({ item, onToggleFavorite }) => {
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: Colors.background,
+        backgroundColor: Colors.backgroundSecondary,
         borderRadius: 14,
         padding: 16,
         marginBottom: 14,
-        borderWidth: 1,
-        borderColor: Colors.lightGray,
     },
     header: {
         flexDirection: 'row',
@@ -152,8 +119,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     typeBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
         backgroundColor: Colors.primary + '20',
         paddingHorizontal: 10,
         paddingVertical: 5,
@@ -162,7 +127,6 @@ const styles = StyleSheet.create({
     typeText: {
         fontSize: 13,
         color: Colors.primary,
-        marginLeft: 6,
         fontWeight: '500',
     },
     name: {

@@ -1,38 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, Text } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, FlatList, Text, ActivityIndicator } from 'react-native';
 import Colors from '../styles/Colors';
 import ServiceTabs from '../components/ServiceTabs';
 import SearchBar from '../components/SearchBar';
 import ServiceCard from '../components/ServiceCard';
-import { allServices } from '../data/mockData';
 import { Svg, Path } from 'react-native-svg';
 import BottomNavBar from '../components/BottomNavBar';
+import { supabase } from '../service/supabase';
 
 export default function HomeScreen() {
     const [activeTab, setActiveTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
-    const [services, setServices] = useState(allServices);
+    const [services, setServices] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const intervalRef = useRef(null);
+
+    // 🔹 Получаем все данные из Supabase
+    const fetchServices = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('services')
+                .select('*')
+                .order('rating', { ascending: false });
+
+            if (error) {
+                console.error('Ошибка при загрузке данных из Supabase:', error);
+            } else if (data) {
+                setServices((prev) => {
+                    // Если данные изменились — обновляем
+                    const changed = JSON.stringify(prev) !== JSON.stringify(data);
+                    return changed ? data : prev;
+                });
+            }
+        } catch (err) {
+            console.error('Ошибка запроса Supabase:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        let filtered = allServices;
-        if (activeTab !== 'all') {
-            filtered = filtered.filter(s => s.type === activeTab.slice(0, -1));
-        }
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(s =>
-                s.name.toLowerCase().includes(query) ||
-                s.description.toLowerCase().includes(query) ||
-                s.shortAddress.toLowerCase().includes(query)
-            );
-        }
-        setServices(filtered);
-    }, [activeTab, searchQuery]);
+        fetchServices(); // первый запуск
 
-    const handleToggleFavorite = (id) => {
-        setServices(prev => prev.map(s =>
-            s.id === id ? { ...s, isFavorite: !s.isFavorite } : s
-        ));
+        // 🔁 автообновление каждые 2 секунды
+        intervalRef.current = setInterval(fetchServices, 2000);
+
+        return () => {
+            clearInterval(intervalRef.current);
+        };
+    }, []);
+
+    // 🔹 Фильтрация данных
+    const filteredServices = services.filter((s) => {
+        let matchesType = true;
+        let matchesSearch = true;
+
+        if (activeTab !== 'all') {
+            matchesType = s.type === activeTab.slice(0, -1); // kennels → kennel
+        }
+
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            matchesSearch =
+                s.name.toLowerCase().includes(q) ||
+                s.description.toLowerCase().includes(q) ||
+                s.short_address.toLowerCase().includes(q);
+        }
+
+        return matchesType && matchesSearch;
+    });
+
+    // 🔹 Изменение "избранного" (локально + Supabase)
+    const handleToggleFavorite = async (id, currentValue) => {
+        // обновляем локально для отзывчивости
+        setServices(prev =>
+            prev.map(s => (s.id === id ? { ...s, is_favorite: !s.is_favorite } : s))
+        );
+
+        // синхронизируем с Supabase
+        const { error } = await supabase
+            .from('services')
+            .update({ is_favorite: !currentValue })
+            .eq('id', id);
+
+        if (error) {
+            console.error('Ошибка обновления избранного:', error);
+        }
     };
 
     const EmptyState = () => (
@@ -48,6 +101,14 @@ export default function HomeScreen() {
         </View>
     );
 
+    if (loading) {
+        return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>PetHouse</Text>
@@ -62,11 +123,14 @@ export default function HomeScreen() {
             <ServiceTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
             <FlatList
-                data={services}
+                data={filteredServices}
                 renderItem={({ item }) => (
-                    <ServiceCard item={item} onToggleFavorite={handleToggleFavorite} />
+                    <ServiceCard
+                        item={item}
+                        onToggleFavorite={() => handleToggleFavorite(item.id, item.is_favorite)}
+                    />
                 )}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => item.id.toString()}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={<EmptyState />}
                 contentContainerStyle={styles.listContent}
@@ -97,7 +161,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     listContent: {
-        paddingBottom: 80, // чтобы не упиралось в таб бар
+        paddingBottom: 80,
     },
     emptyState: {
         alignItems: 'center',
